@@ -1,5 +1,6 @@
 circuits_schema = {
     "file_type": "csv",
+    "header": True,
     "fields":[
         {
             "circuitId": {

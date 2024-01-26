@@ -1,5 +1,6 @@
 races_schema = {
     "file_type": "csv",
+    "header": True,
     "fields":[
         {
             "raceId": {

@@ -1,0 +1,5 @@
+target_bucket = 'orbidi-data-project'
+prefix = 'raw'
+folder = '/home/pedrodev/Documents/pcf_repository/aws/formula1/cleaning_data/raw'
+processed_folder = '/home/pedrodev/Documents/pcf_repository/aws/formula1/cleaning_data/processed'
+extension = 'DS_Store'
