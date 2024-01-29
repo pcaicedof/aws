@@ -13,7 +13,7 @@ from utils.schemas.pit_stops import pit_stops_schema
 from utils.schemas.results import results_schema
 from utils.schemas.lap_times import lap_times_schema
 from utils.schemas.qualifying import qualifying_schema
-from utils.constants import target_bucket, prefix, folder, processed_folder, extension
+from utils.constants import target_bucket, prefix_raw, prefix_processed,folder, processed_folder, extension, db_properties
 
 
 
@@ -25,6 +25,7 @@ logging.basicConfig(level=logging.INFO,
 
 spark = SparkSession.builder \
     .appName("Clean data") \
+    .config("spark.jars.packages", "org.postgresql:postgresql:42.2.5") \
     .getOrCreate()
 
 def get_secret():
@@ -84,7 +85,7 @@ def get_file_list(bucket, prefix):
                             aws_access_key_id=aws_access_key_id,
                             aws_secret_access_key=aws_secret_access_key)
     objects = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)['Contents']
-    
+
     file_list = []
     for obj in objects:
         if obj['Key'] != f"{prefix}/":
@@ -92,28 +93,47 @@ def get_file_list(bucket, prefix):
             file_list.append(file)
     return list(set(file_list))
 
+
+def load_data_to_postgresql( df, table_name, db_properties):
+    schema = db_properties['schema']
+    df.write \
+        .format("jdbc") \
+        .option("url", db_properties['url']) \
+        .option("dbtable", f"{schema}.{table_name}") \
+        .option("user", db_properties['user']) \
+        .option("password", db_properties['password']) \
+        .option("driver", "org.postgresql.Driver") \
+        .mode("overwrite") \
+        .save()
+
+
 def load_table_to_processed(file):
     table = file.split('.')[0]
     schema_dict = globals()[f"{table}_schema"]
-    #s3_file = f"s3://{target_bucket}/{prefix}/{file}"
-    s3_file = f"{folder}/{file}"
+    #raw_s3_file = f"s3://{target_bucket}/{prefix_raw}/{file}"
+    raw_s3_file = f"{folder}/{file}"
     spark_schema, new_fields = get_pyspark_schema(table, schema_dict)
     if schema_dict['file_type'] == 'csv':
         header= schema_dict['header']
-        df = spark.read.csv(s3_file, header=header, schema=spark_schema)
+        df = spark.read.csv(raw_s3_file, header=header, schema=spark_schema)
     elif schema_dict['file_type'] == 'json':
         multiline= schema_dict['multiline']
-        df = spark.read.json(s3_file, schema=spark_schema, multiLine=multiline)
-    
+        df = spark.read.json(raw_s3_file, schema=spark_schema, multiLine=multiline)
     df_renamed = rename_dataframe(df, new_fields)
-    df_renamed.write.mode("overwrite").parquet(f"{processed_folder}/{table}")
-    logging.info(f"{table} was loaded to proccesed" )
+    #processed_file = f"s3a://{target_bucket}/{prefix_raw}/{table}"
+    processed_file = f"{processed_folder}/{table}"
+    df_renamed.write.mode("overwrite").parquet(processed_file)
+    logging.info(f"{table} was loaded to proccesed folder" )
+    load_data_to_postgresql( df_renamed, table, db_properties)
+    logging.info(f"{table} was loaded to postgresql" )
+    
 
 def main():
     logging.info("Start of process")
-    file_list = get_file_list(target_bucket, prefix)
+    file_list = get_file_list(target_bucket, prefix_raw)
     for file in file_list:
         logging.info(f"{file} will be processed")
         load_table_to_processed(file)
+    logging.info("End of process")
 
 main()

@@ -4,43 +4,43 @@ pit_stops_schema = {
     "fields":[
         {
             "raceId": {
-                "field_name": "driver_id",
+                "field_name": "race_id",
                 "field_type": "int"
             }
         },
         {
             "driverId": {
-                "field_name": "driver_ref",
+                "field_name": "driver_id",
                 "field_type": "int"
             }
         },
         {
             "stop": {
-                "field_name": "number",
+                "field_name": "stop",
                 "field_type": "int"
             }
         },
         {
             "lap": {
-                "field_name": "code",
+                "field_name": "lap",
                 "field_type": "int"
             }
         },
         {
             "time": {
-                "field_name": "forename",
+                "field_name": "time",
                 "field_type": "time"
             }
         },
         {
             "duration": {
-                "field_name": "surname",
+                "field_name": "duration",
                 "field_type": "varchar"
             }
         },
         {
             "milliseconds": {
-                "field_name": "driver_birthdate",
+                "field_name": "milliseconds",
                 "field_type": "int"
             }
         }  
