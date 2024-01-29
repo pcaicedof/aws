@@ -33,6 +33,16 @@ spark._jsc.hadoopConfiguration().set("fs.s3a.aws.credentials.provider", "com.ama
 
 
 def get_file_list(folder):
+    """
+    Obtiene una lista de archivos en el directorio especificado.
+
+    Args:
+        folder (str): Ruta del directorio del cual se quieren listar los archivos.
+
+    Returns:
+        list: Lista de nombres de archivos en el directorio especificado.
+    """
+
     try:
         file_list = [file for file in listdir(folder)]
         print(f"files found are {file_list}")
@@ -43,11 +53,27 @@ def get_file_list(folder):
 
 
 def get_table_view(table):
+     """
+    Crea o reemplaza una vista temporal en Spark a partir de un archivo Parquet.
+
+    Args:
+        table (str): Nombre de la tabla (archivo Parquet) para crear la vista.
+    """
+
     parquet_file = f"{processed_folder}/{table}"
     df=spark.read.parquet(parquet_file)
     df.createOrReplaceTempView(table)
 
 def load_data_to_postgresql( df, table_name, db_properties):
+    """
+    Carga un DataFrame de Spark a una tabla en PostgreSQL utilizando la conexión de Redshift.
+
+    Args:
+        df (DataFrame): DataFrame de Spark que se va a cargar.
+        table_name (str): Nombre de la tabla destino en PostgreSQL.
+        db_properties (dict): Diccionario con propiedades de la base de datos como URL, usuario, contraseña, etc.
+    """
+    
     schema = db_properties['schema']
     df.write \
         .format("io.github.spark_redshift_community.spark.redshift") \

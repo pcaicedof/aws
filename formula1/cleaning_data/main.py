@@ -29,6 +29,12 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 def get_secret():
+    """
+    Recupera un secreto (credenciales de acceso de AWS) del Administrador de Secretos de AWS.
+
+    Devuelve:
+        Un diccionario que contiene la cadena de secreto, que incluye el ID de clave de acceso y la clave de acceso secreta de AWS.
+    """
 
     secret_name = "aws_access"
     region_name = "us-east-1"
@@ -51,6 +57,16 @@ def get_secret():
 
 
 def map_data_type(data_type):
+    """
+    Mapea un string de tipo de dato a un tipo de dato SQL de PySpark correspondiente.
+
+    Args:
+        data_type (str): El tipo de dato como string (por ejemplo, 'int', 'varchar', 'float', 'date').
+
+    Devuelve:
+        Un objeto de tipo de dato SQL de PySpark (por ejemplo, IntegerType, StringType, FloatType, DateType).
+    """
+
     data_types = {
         "int": IntegerType(),
         "varchar": StringType(),
@@ -61,6 +77,17 @@ def map_data_type(data_type):
     return data_types
 
 def rename_dataframe(df, new_fields):
+    """
+    Renombra columnas de un DataFrame de PySpark basado en un mapeo dado.
+
+    Args:
+        df (DataFrame): El DataFrame de PySpark original.
+        new_fields (dict): Un diccionario que mapea nombres antiguos de columnas a nombres nuevos.
+
+    Devuelve:
+        DataFrame: El DataFrame con columnas renombradas.
+    """
+
     fields_list = list(new_fields.keys())
     df_renamed= df
     for field in fields_list:
@@ -70,6 +97,17 @@ def rename_dataframe(df, new_fields):
 
 
 def get_pyspark_schema(table, schema_dict):
+    """
+    Genera un esquema de PySpark y un diccionario de renombrado de campos para una tabla dada.
+
+    Args:
+        table (str): El nombre de la tabla.
+        schema_dict (dict): Un diccionario que contiene información del esquema.
+
+    Devuelve:
+        tuple: Una tupla que contiene un esquema StructType de PySpark y un diccionario para el renombrado de campos.
+    """
+
     fields = schema_dict["fields"]
     spark_schema = StructType([
         StructField(list(field.keys())[0], map_data_type(field[list(field.keys())[0]]["field_type"]))
@@ -78,6 +116,18 @@ def get_pyspark_schema(table, schema_dict):
     return spark_schema, new_fields
 
 def get_file_list(bucket, prefix):
+    """
+    Recupera una lista de archivos de un bucket S3 con un prefijo especificado.
+
+    Args:
+        bucket (str): El nombre del bucket S3.
+        prefix (str): El prefijo para filtrar objetos en el bucket S3.
+
+    Devuelve:
+        list: Una lista de nombres de archivos en el bucket S3 que coinciden con el prefijo dado.
+    """
+
+
     secret = get_secret()
     aws_access_key_id = secret['access_key']
     aws_secret_access_key = secret['secret_access_key']
@@ -95,6 +145,15 @@ def get_file_list(bucket, prefix):
 
 
 def load_data_to_postgresql( df, table_name, db_properties):
+    """
+    Carga un DataFrame de PySpark en una tabla de base de datos PostgreSQL.
+
+    Args:
+        df (DataFrame): El DataFrame de PySpark que se cargará.
+        table_name (str): El nombre de la tabla de PostgreSQL.
+        db_properties (dict): Un diccionario que contiene propiedades de la base de datos como URL, usuario, contraseña y esquema.
+    """
+
     schema = db_properties['schema']
     df.write \
         .format("jdbc") \
@@ -108,6 +167,14 @@ def load_data_to_postgresql( df, table_name, db_properties):
 
 
 def load_table_to_processed(file):
+    """
+    Procesa un archivo desde formato crudo, lo transforma en un DataFrame, renombra columnas, lo guarda en formato procesado,
+    y lo carga en un bucket de s3 y en PostgreSQL.
+
+    Args:
+        file (str): El nombre del archivo a procesar.
+    """
+
     table = file.split('.')[0]
     schema_dict = globals()[f"{table}_schema"]
     #raw_s3_file = f"s3://{target_bucket}/{prefix_raw}/{file}"
@@ -129,6 +196,11 @@ def load_table_to_processed(file):
     
 
 def main():
+    """
+    La función principal para ejecutar el flujo de trabajo de procesamiento de datos. Recupera una lista de archivos, procesa cada archivo,
+    y registra el inicio y fin del proceso.
+    """
+    
     logging.info("Start of process")
     file_list = get_file_list(target_bucket, prefix_raw)
     for file in file_list:
