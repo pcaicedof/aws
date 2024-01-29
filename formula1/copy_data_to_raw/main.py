@@ -9,9 +9,7 @@ from utils.constants import source_bucket, target_bucket
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s | %(name)s'
                            '| %(levelname)s | %(message)s')
-def get_secret():
-
-    secret_name = "aws_access"
+def get_secret(secret_name):
     region_name = "us-east-1"
 
     # Create a Secrets Manager client
@@ -31,9 +29,9 @@ def get_secret():
 
 
 def copy_files_to_raw(source_bucket, target_bucket):
-    secret = get_secret()
-    aws_access_key_id = secret['access_key']
-    aws_secret_access_key = secret['secret_access_key']
+    aws_access = get_secret("aws_access")
+    aws_access_key_id = aws_access['access_key']
+    aws_secret_access_key = aws_access['secret_access_key']
     s3_client = boto3.client('s3',
                          aws_access_key_id=aws_access_key_id,
                          aws_secret_access_key=aws_secret_access_key)
@@ -49,10 +47,6 @@ def copy_files_to_raw(source_bucket, target_bucket):
         logging.info(f"File {obj['Key']} has been copied")
 
 
-def main():
-    #print(event)
+def main(event, context):
     logging.info("Process started")
     copy_files_to_raw(source_bucket, target_bucket)
-
-
-main()
