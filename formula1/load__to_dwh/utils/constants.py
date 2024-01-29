@@ -1,18 +1,22 @@
+from decouple import config
+
 db_redshift_properties = {
-    "redshift_jdbc_url": "jdbc:redshift://formula1-workgroup.381491849275.us-east-1.redshift-serverless.amazonaws.com:5439/formula1_dwh",
-    "tempdir": "s3a://orbidi-logs/temp-dir",
-    "user": "pecafa",
-    "password": "C41c3d01982",
-    "schema": "public"
+    "redshift_jdbc_url": config('DWH_URL'),
+    "tempdir": config('DWH_TEMP_DIR'),
+    "user": config('DWH_USER'),
+    "password": config('DWH_PASSWORD'),
+    "schema": config('DWH_SCHEMA')
 }
 
 db_postgresql_properties = {
-    "url": "jdbc:postgresql://localhost:5432/my_project",
-    "user": "pecafa",
-    "password": "c41c3d0",
-    "driver": "org.postgresql.Driver",
-    "schema": "formula1",
-    "dbname": "my_project"
+    "url": config('DB_URL'),
+    "host": config('DB_HOST'),
+    "port": config('DB_PORT'),
+    "user": config('DB_USER'),
+    "password": config('DB_PASSWORD'),
+    "driver": config('DB_DRIVER'),
+    "schema": config('DB_SCHEMA'),
+    "dbname": config('DB_NAME')
 }
 
 
@@ -48,3 +52,7 @@ fact_races_query = """
     join formula1.circuits cir on cir.circuit_id = r.circuit_id 
     join formula1.qualifying q on res.race_id = q.race_id and res.driver_id = q.driver_id
 """
+
+table_queries= {
+    "fact_races_results":fact_races_query
+}

@@ -9,7 +9,7 @@ from os import listdir
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, DateType
 from pyspark.sql import SQLContext, SparkSession
 from pyspark import SparkContext
-from utils.constants import  db_postgresql_properties, processed_folder, fact_races_query
+from utils.constants import  db_postgresql_properties, processed_folder, fact_races_query, db_redshift_properties, table_queries
 
 
 
@@ -53,18 +53,18 @@ def get_file_list(folder):
 
 
 def get_table_view(table):
-     """
+    """
     Crea o reemplaza una vista temporal en Spark a partir de un archivo Parquet.
 
     Args:
         table (str): Nombre de la tabla (archivo Parquet) para crear la vista.
-    """
+        """
 
     parquet_file = f"{processed_folder}/{table}"
     df=spark.read.parquet(parquet_file)
     df.createOrReplaceTempView(table)
 
-def load_data_to_postgresql( df, table_name, db_properties):
+def load_df_to_redshift( df, table_name, db_properties):
     """
     Carga un DataFrame de Spark a una tabla en PostgreSQL utilizando la conexión de Redshift.
 
@@ -86,30 +86,41 @@ def load_data_to_postgresql( df, table_name, db_properties):
         .mode("overwrite") \
         .save()
 
-folder_list = get_file_list(processed_folder)
-for folder in folder_list:
-    print(folder)
-    #get_table_view(folder)
+
+def load_pq_to_redshift(table_name, query, db_postgresql_properties, db_redshift_properties):
+    host = db_postgresql_properties['host']
+    port = db_postgresql_properties['port']
+    dbname = db_postgresql_properties['dbname']
+    user = db_postgresql_properties['user']
+    password = db_postgresql_properties['password']
+    dwh_user=db_redshift_properties['user']
+    dwh_password=db_redshift_properties['password']
+    dwh_endpoint=db_redshift_properties['redshift_jdbc_url']
+
+    postgresql_connection = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+    redshift_connection = f"postgresql+psycopg2://{dwh_user}:{dwh_password}@{dwh_endpoint}"
+    postgresql_engine = create_engine(postgresql_connection)
+    redshift_engine = create_engine(redshift_connection)
+    df = pd.read_sql(query, postgresql_engine)
+    print(df.head())
+    try:
+        df.to_sql(table_name, redshift_engine, index=False, if_exists='replace')
+    except Exception as e:
+        print(e)
+
+def main():
+    list_table_queries = list(table_queries.keys())
+    print(list_table_queries)
+
+
+    for table_name in list_table_queries:
+        query=table_queries[table_name]
+        load_pq_to_redshift(table_name, query, db_postgresql_properties, db_redshift_properties)
+        
+main()
+
+    #folder_list = get_file_list(processed_folder)
+#get_table_view(folder)
 
 #df_fact_races_result = spark.sql(fact_races_query)
 #load_data_to_postgresql(df_fact_races_result, "fact_races_rsult", db_properties)
-host = "localhost"
-port = "5432"
-dbname = db_postgresql_properties['dbname']
-user = db_postgresql_properties['user']
-password = db_postgresql_properties['password']
-
-postgresql_connection = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
-redshift_connection = f"postgresql+psycopg2://pecafa:C41c3d01982@formula1-workgroup.381491849275.us-east-1.redshift-serverless.amazonaws.com:5439/formula1_dwh"
-
-# Crear motor de conexión
-postgresql_engine = create_engine(postgresql_connection)
-redshift_engine = create_engine(redshift_connection)
-
-# Consulta SQL
-
-# Leer los datos en un DataFrame de pandas
-df = pd.read_sql(fact_races_query, postgresql_engine)
-print(df.head())
-df.to_sql('fact_races_result', redshift_engine, index=False, if_exists='replace')
-
